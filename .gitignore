@@ -1,0 +1,4 @@
+uv.lock
+.venv
+results
+__pycache__

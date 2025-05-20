@@ -1,0 +1,4 @@
+gymnasium==0.29.1
+numpy>=1.26.0
+matplotlib==3.7.4
+pygame==2.5.2 
