@@ -15,7 +15,7 @@ def main():
     
     # Run for 100 steps
     for step in range(NUM_STEPS):
-        # Random action
+        # Uniform Random Policy
         action = env.action_space.sample()
         action_names = ["move left", "move right", "pull lever"]
         
