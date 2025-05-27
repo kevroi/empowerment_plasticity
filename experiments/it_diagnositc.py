@@ -90,8 +90,35 @@ def drv_quantities():
 
     plt.show()
 
+def drs_quantities():
+    """
+    """
+    history_length = 100
+    sizes = [2**i for i in range(1, 10)]
+    sizes = [1000]
+    D_xseq_yseqs = []
+    for n in sizes:
+        x_seqs = np.random.randint(0, 2, size=(n, history_length))
+        y_seqs = np.random.randint(0, 2, size=(n, history_length))
+
+        D_xseq_yseqs.append(mi.directed_info(x_seqs, y_seqs))
+
+    print(D_xseq_yseqs)
+
+    # fig, axs = plt.subplots(2, 1)
+    # # axs[0].set_ylim(-0.1, 1.1)
+
+    # axs[0].plot(sizes, D_xseq_yseqs)
+    # axs[0].set_xscale('log')
+    # # axs[0].set_ylabel('$\mathbb{I}(X^n \rightarrow Y^n)$')
+    # axs[0].axhline(y=0, color='r', linestyle='--')
+    # axs[0].set_xlabel('Sample Size')
+
+    # plt.show()
+
 if __name__ == "__main__":
-    drv_quantities()
+    # drv_quantities()
+    drs_quantities()
 
 
 

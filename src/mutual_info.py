@@ -28,3 +28,16 @@ def conditional_mutual_info(xs: Sequence[Hashable], ys: Sequence[Hashable], give
     yz_pairs = list(zip(ys, given_zs))
     h_x_given_yz = conditional_entropy(xs, yz_pairs)
     return h_x_given_z - h_x_given_yz
+
+def directed_info(x_seqs: Sequence[Sequence[Hashable]], y_seqs: Sequence[Sequence[Hashable]]) -> float:
+    T = len(x_seqs[0])
+    total_di = 0
+    for i in range(T):
+        x_pasts = [tuple(x_seq[:i+1]) for x_seq in x_seqs]
+        y_nows = [y_seq[i] for y_seq in y_seqs]
+        y_pasts = [tuple(y_seq[:i]) for y_seq in y_seqs]
+        # print(f"x_pasts: {x_pasts} \n y_nows: {y_nows} \n y_pasts: {y_pasts}")
+        # print(f"conditional_mutual_info: {conditional_mutual_info(x_pasts, y_nows, y_pasts)}")
+        # print("-"*100)
+        total_di += conditional_mutual_info(x_pasts, y_nows, y_pasts)
+    return total_di
