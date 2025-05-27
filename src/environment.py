@@ -79,6 +79,9 @@ class LightRooms(gym.Env):
             truncated: Always False
             info: Additional information
         """
+        # Update X state (fair coin flip)
+        self.x_state = self.np_random.integers(0, 2)
+
         # Handle movement actions
         if action == 0:  # Move left
             self.current_room = max(0, self.current_room - 1)
@@ -92,12 +95,7 @@ class LightRooms(gym.Env):
                 # Agent controls the light
                 self.light_state = 1 - self.light_state  # Toggle light
             else:
-                # X controls the light
-                if self.np_random.random() < 0.5:  # X is a fair coin
-                    self.light_state = 1 - self.light_state
-        
-        # Update X state (fair coin flip)
-        self.x_state = self.np_random.integers(0, 2)
+                self.light_state = self.x_state
         
         observation = (self.current_room, self.light_state)
         info = {
