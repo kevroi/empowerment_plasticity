@@ -93,8 +93,9 @@ class LightRooms(gym.Env):
             
             if self.np_random.random() < control_prob:
                 # Agent controls the light
-                self.light_state = 1 - self.light_state  # Toggle light
+                self.light_state = 1 - self.light_state
             else:
+                # X controls the light
                 self.light_state = self.x_state
         
         observation = (self.current_room, self.light_state)
