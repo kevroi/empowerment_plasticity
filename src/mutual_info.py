@@ -1,7 +1,4 @@
-# Becoming familiar with entropy calculations
-
 import numpy as np
-import matplotlib.pyplot as plt
 from collections import Counter
 from typing import Sequence, Hashable
 
@@ -36,8 +33,11 @@ def directed_info(x_seqs: Sequence[Sequence[Hashable]], y_seqs: Sequence[Sequenc
         x_pasts = [tuple(x_seq[:i+1]) for x_seq in x_seqs]
         y_nows = [y_seq[i] for y_seq in y_seqs]
         y_pasts = [tuple(y_seq[:i]) for y_seq in y_seqs]
-        # print(f"x_pasts: {x_pasts} \n y_nows: {y_nows} \n y_pasts: {y_pasts}")
-        # print(f"conditional_mutual_info: {conditional_mutual_info(x_pasts, y_nows, y_pasts)}")
-        # print("-"*100)
         total_di += conditional_mutual_info(x_pasts, y_nows, y_pasts)
     return total_di
+
+# TO TRY:
+# windowed directed info
+# directed_info / history_length
+# empowerment has a max over DIs in its defintion
+# generalised directed info
