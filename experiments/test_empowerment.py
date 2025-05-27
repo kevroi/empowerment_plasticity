@@ -102,48 +102,6 @@ def collect_action_observation_sequences(env, room_id: int, n_episodes: int = 10
     
     return action_sequences, observation_sequences
 
-def measure_empowerment_per_room(n_rooms: int = 4, n_episodes: int = 1000, 
-                                episode_length: int = 30, max_history: int = 5):
-    """
-    Measure empowerment (directed information from actions to observations) for each room.
-    
-    Args:
-        n_rooms: Number of rooms (excluding room 0)
-        n_episodes: Number of episodes per room
-        episode_length: Length of each episode
-        max_history: Maximum history length for directed information calculation
-    
-    Returns:
-        Dictionary mapping room_id to empowerment value
-    """
-    env = LightRooms(n_rooms=n_rooms)
-    
-    empowerment_values = {}
-    control_probabilities = {}
-    
-    for room_id in range(n_rooms + 1):  # 0 to n_rooms
-        print(f"Collecting data for room {room_id}...")
-        
-        # Collect action-observation sequences
-        action_seqs, obs_seqs = collect_action_observation_sequences(
-            env, room_id, n_episodes, episode_length
-        )
-        
-        # Calculate directed information from actions to observations
-        # Using windowed approach to avoid sparse estimation issues
-        # empowerment = calculate_windowed_directed_info(
-        #     action_seqs, obs_seqs, max_history
-        # )
-        empowerment = mi.directed_info(action_seqs, obs_seqs) / episode_length
-        
-        empowerment_values[room_id] = empowerment
-        control_probabilities[room_id] = room_id / n_rooms
-        
-        print(f"Room {room_id}: Empowerment = {empowerment:.4f}, Control Prob = {control_probabilities[room_id]:.2f}")
-    
-    env.close()
-    return empowerment_values, control_probabilities
-
 def calculate_windowed_directed_info(action_seqs: List[List[int]], 
                                    obs_seqs: List[List[int]], 
                                    window_size: int = 5) -> float:
@@ -181,33 +139,85 @@ def calculate_windowed_directed_info(action_seqs: List[List[int]],
         total_di += cmi
         count += 1
     
-    # return total_di / count if count > 0 else 0.0
-    return total_di
+    return total_di / count if count > 0 else 0.0
 
-def plot_empowerment_vs_room(empowerment_values: Dict[int, float], 
-                           control_probabilities: Dict[int, float]):
+def measure_empowerment_per_room(n_rooms: int = 4,
+                                 n_episodes: int = 1000, 
+                                 episode_length: int = 30):
+    """
+    Measure agent's empowerment(directed information from actions to observations)
+    and plasticity (directed information from observations to actions) for each room.
+    
+    Args:
+        n_rooms: Number of rooms (excluding room 0)
+        n_episodes: Number of episodes per room
+        episode_length: Length of each episode
+    
+    Returns:
+        Dictionary mapping room_id to empowerment and plasticity values
+    """
+    env = LightRooms(n_rooms=n_rooms)
+    
+    empowerment_values = {}
+    plasticity_values = {}
+    control_probabilities = {}
+    
+    for room_id in range(n_rooms + 1):  # 0 to n_rooms
+        print(f"Collecting data for room {room_id}...")
+        
+        # Collect action-observation sequences
+        action_seqs, obs_seqs = collect_action_observation_sequences(
+            env, room_id, n_episodes, episode_length
+        )
+        
+        # empowerment = mi.directed_info(action_seqs, obs_seqs) / episode_length
+        # plasticity = mi.directed_info(obs_seqs, action_seqs) / episode_length
+
+        empowerment = calculate_windowed_directed_info(action_seqs, obs_seqs)
+        plasticity = calculate_windowed_directed_info(obs_seqs, action_seqs)
+        
+        empowerment_values[room_id] = empowerment
+        plasticity_values[room_id] = plasticity
+        control_probabilities[room_id] = room_id / n_rooms
+        
+        print(f"Room {room_id}: Empowerment = {empowerment:.4f}, Plasticity = {plasticity:.4f}, Control Prob = {control_probabilities[room_id]:.2f}")
+    
+    env.close()
+    return empowerment_values, plasticity_values, control_probabilities
+
+
+def plot_empowerment_vs_room(empowerment_values: Dict[int, float],
+                             plasticity_values: Dict[int, float],
+                             control_probabilities: Dict[int, float]):
     """
     Plot empowerment as a function of room number.
     """
     rooms = sorted(empowerment_values.keys())
     empowerment_vals = [empowerment_values[room] for room in rooms]
+    plasticity_vals = [plasticity_values[room] for room in rooms]
     control_probs = [control_probabilities[room] for room in rooms]
     
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 8))
     
     # Plot empowerment
     ax1.plot(rooms, empowerment_vals, 'bo-', linewidth=2, markersize=8)
     ax1.set_xlabel('Room Number')
-    ax1.set_ylabel('Empowerment (bits)')
+    ax1.set_ylabel('Empowerment')
     ax1.set_title('Empowerment vs Room Number')
     ax1.grid(True, alpha=0.3)
+
+    ax2.plot(rooms, plasticity_vals, 'go-', linewidth=2, markersize=8)
+    ax2.set_xlabel('Room Number')
+    ax2.set_ylabel('Plasticity')
+    ax2.set_title('Plasticity vs Room Number')
+    ax2.grid(True, alpha=0.3)
     
     # Plot control probability for reference
-    ax2.plot(rooms, control_probs, 'ro-', linewidth=2, markersize=8)
-    ax2.set_xlabel('Room Number')
-    ax2.set_ylabel('Control Probability')
-    ax2.set_title('Control Probability vs Room Number')
-    ax2.grid(True, alpha=0.3)
+    ax3.plot(rooms, control_probs, 'ro-', linewidth=2, markersize=8)
+    ax3.set_xlabel('Room Number')
+    ax3.set_ylabel('Control Probability')
+    ax3.set_title('Control Probability vs Room Number')
+    ax3.grid(True, alpha=0.3)
     
     plt.tight_layout()
     plt.show()
@@ -221,15 +231,14 @@ def run_empowerment_experiment():
     print("Starting empowerment measurement experiment...")
     
     # Run experiment
-    empowerment_values, control_probabilities = measure_empowerment_per_room(
+    empowerment_values, plasticity_values, control_probabilities = measure_empowerment_per_room(
         n_rooms=19,
         n_episodes=1000,
-        episode_length=30,
-        max_history=5
+        episode_length=30
     )
     
     # Plot results
-    fig = plot_empowerment_vs_room(empowerment_values, control_probabilities)
+    fig = plot_empowerment_vs_room(empowerment_values, plasticity_values, control_probabilities)
     
     # Print summary
     print("\n=== RESULTS ===")
@@ -237,7 +246,7 @@ def run_empowerment_experiment():
         print(f"Room {room}: Empowerment = {empowerment_values[room]:.4f} bits, "
               f"Control Prob = {control_probabilities[room]:.2f}")
     
-    return empowerment_values, control_probabilities, fig
+    return empowerment_values, plasticity_values, control_probabilities, fig
 
 if __name__ == "__main__":
     run_empowerment_experiment()
