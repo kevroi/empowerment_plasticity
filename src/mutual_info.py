@@ -32,11 +32,21 @@ def conditional_mutual_info(xs: Sequence[Hashable],
     return h_x_given_z - h_x_given_yz
 
 def directed_info(x_seqs: Sequence[Sequence[Hashable]],
-                  y_seqs: Sequence[Sequence[Hashable]]) -> float:
+                  y_seqs: Sequence[Sequence[Hashable]],
+                  chunk_size: int = 1) -> float:
+    """
+    Compute the directed information between two sequences.
+    Args:
+        x_seqs: Sequence of sequences of hashable objects.
+        y_seqs: Sequence of sequences of hashable objects.
+        chunk_size: Size of the chunks to sum over. Bigger = coarser temporal resolution.
+    Returns:
+        The directed information between the two sequences.
+    """
     T = len(x_seqs[0])
     total_di = 0
-    for i in range(T):
-        x_pasts = [tuple(x_seq[:i+1]) for x_seq in x_seqs]
+    for i in range(0, T, chunk_size):
+        x_pasts = [tuple(x_seq[:i+chunk_size]) for x_seq in x_seqs]
         y_nows = [y_seq[i] for y_seq in y_seqs]
         y_pasts = [tuple(y_seq[:i]) for y_seq in y_seqs]
         total_di += conditional_mutual_info(x_pasts, y_nows, y_pasts)
