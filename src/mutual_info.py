@@ -1,12 +1,63 @@
 import numpy as np
-from collections import Counter
+from collections import defaultdict, Counter
 from typing import Sequence, Hashable
+from scipy.stats import entropy as scipy_entropy
 
-def entropy(xs: Sequence[Hashable]) -> float:
+def entropy(xs: Sequence[Hashable], mm_correction: bool = False) -> float:
+    """
+    H(X) = - \sum_{x \in X} p(x) \log_2 p(x)
+    """
     counts = Counter(xs)
     total = len(xs)
     probabilities = np.array([count / total for count in counts.values()])
-    return -np.sum(p * np.log2(p) for p in probabilities if p > 0)
+    mle_entropy = -np.sum(p * np.log2(p) for p in probabilities if p > 0)
+    
+    if mm_correction:
+        correction = (len(counts) - 1) / (2 * total)
+        # return mle_entropy - np.log2(total)
+        return mle_entropy + correction
+    else:
+        return mle_entropy
+
+def entropy_seq(x_seqs: Sequence[Sequence[Hashable]], k: int = 2) -> float:
+    """
+    Estimate H(X^n) ≈ sum_t H(X_t | X_{t-k:t-1})
+    using Markov order-k approximation.
+
+    Note:
+    I initially tried to estimate the entropy of the full joint distribution
+    over all possible sequences of length n (a 2^100 sized alphabet in the Bernoulli
+    case), but I was in the incredibly undersampled regime, even with the MM correction.
+    (In the bernoulli case, all observed samples were unqiue and had entropy of about 10 bits)
+
+    So I switched to this incremental approach, and added a k-length history to 
+    approximate each conditional entropy. This approximates the sequence to be a Markov
+    process of order k.
+    
+    Args:
+        x_seqs: list of sequences (samples) of equal length
+        k: context length (history size)
+    """
+    seq_len = len(x_seqs[0])
+
+    total_entropy = 0.0
+    for t in range(seq_len):
+        targets = []
+        contexts = []
+        for seq in x_seqs:
+            if t < k:
+                # Use empty or truncated context for early timesteps
+                ctx = tuple(seq[:t])
+            else:
+                ctx = tuple(seq[t - k:t])
+            x_t = seq[t]
+            targets.append(x_t)
+            contexts.append(ctx)
+
+        h_t = conditional_entropy_from_context(targets, contexts)
+        total_entropy += h_t
+
+    return total_entropy
 
 def joint_entropy(xs: Sequence[Hashable],
                   ys: Sequence[Hashable]) -> float:
@@ -23,6 +74,29 @@ def conditional_entropy(xs: Sequence[Hashable],
                         given_ys: Sequence[Hashable]) -> float:
     return joint_entropy(xs, given_ys) - entropy(given_ys)
 
+def conditional_entropy_from_context(
+    targets: Sequence[Hashable],
+    contexts: Sequence[tuple[Hashable]]
+) -> float:
+    """
+    Estimate H(targets | contexts) from empirical counts.
+    """
+    assert len(targets) == len(contexts)
+    context_to_targets = defaultdict(list)
+    for ctx, x in zip(contexts, targets):
+        context_to_targets[ctx].append(x)
+
+    total = len(targets)
+    cond_entropy = 0.0
+
+    for ctx, xs in context_to_targets.items():
+        count = len(xs)
+        probs = np.array(list(Counter(xs).values())) / count
+        h_x_given_ctx = -np.sum(p * np.log2(p) for p in probs if p > 0)
+        cond_entropy += (count / total) * h_x_given_ctx
+
+    return cond_entropy
+
 def conditional_mutual_info(xs: Sequence[Hashable],
                             ys: Sequence[Hashable],
                             given_zs: Sequence[Hashable]) -> float:
@@ -31,32 +105,18 @@ def conditional_mutual_info(xs: Sequence[Hashable],
     h_x_given_yz = conditional_entropy(xs, yz_pairs)
     return h_x_given_z - h_x_given_yz
 
-def directed_info(x_seqs: Sequence[Sequence[Hashable]],
-                  y_seqs: Sequence[Sequence[Hashable]],
-                  chunk_size: int = 1) -> float:
-    """
-    Compute the directed information between two sequences.
-    Args:
-        x_seqs: Sequence of sequences of hashable objects.
-        y_seqs: Sequence of sequences of hashable objects.
-        chunk_size: Size of the chunks to sum over. Bigger = coarser temporal resolution.
-    Returns:
-        The directed information between the two sequences.
-    """
-    T = len(x_seqs[0])
-    total_di = 0
-    for i in range(0, T, chunk_size):
-        x_pasts = [tuple(x_seq[:i+chunk_size]) for x_seq in x_seqs]
-        y_nows = [y_seq[i] for y_seq in y_seqs]
-        y_pasts = [tuple(y_seq[:i]) for y_seq in y_seqs]
-        total_di += conditional_mutual_info(x_pasts, y_nows, y_pasts)
-    return total_di
-
 # TO TRY:
-# windowed directed info
-# directed_info / history_length
+# Masey 1990 also suggests another way to compute DI:
+# I(X^n -> Y^n) = H(Y^N) - \sum{n=1}^N H(Y_n | X_n)
+
+# directed_info / history_length for bit per step??
+
 # empowerment has a max over DIs in its defintion
+
 # generalised directed info - this conditions on two sequences
+
 # try finding examples where empoweremnt and plasticyt should vary in specific ways.
+
 # Also DI is not symmetric, so yoiu could have some test for that
+
 # DI can never go down right? Windowed DI may.
