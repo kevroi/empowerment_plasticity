@@ -3,7 +3,9 @@
 import src.mutual_info as mi
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from tqdm import tqdm
+from collections import defaultdict
 
 def drv_quantities():
     """
@@ -103,39 +105,62 @@ def drs_quantities():
 
     for n in tqdm(sizes):
         x_seqs = [tuple(np.random.randint(0, 2, size=history_length)) for _ in range(n)]
-        # y_seqs = [tuple(np.random.randint(0, 2, size=history_length)) for _ in range(n)]
+        y_seqs = [tuple(np.random.randint(0, 2, size=history_length)) for _ in range(n)]
 
         H_xseqs.append(mi.entropy_seq(x_seqs))
-        # H_yseqs.append(mi.entropy_seqs(y_seqs))
-        # D_xseq_yseqs.append(mi.directed_info(x_seqs, y_seqs))
+        H_yseqs.append(mi.entropy_seq(y_seqs))
+        D_xseq_yseqs.append(mi.directed_info_approx_markov(x_seqs, y_seqs)) # TODO incerasing k should make this go down, no?
         # D_xseq_yseqs.append(mi.directed_info_masey(x_seqs, y_seqs))
 
-    print(H_xseqs)
-    # print(D_xseq_yseqs) # TODO this goes up linearly when history length is 100
+    # print(H_xseqs)
+    print(D_xseq_yseqs) # TODO this goes up linearly when history length is 100
     
     fig, axs = plt.subplots(2, 1)
     axs[0].plot(sizes, H_xseqs)
     axs[0].axhline(y=history_length, color='r', linestyle='--')
-    # axs[0].plot(sizes, H_yseqs)
     axs[0].set_xscale('log')
     axs[0].set_ylabel('$\mathrm{\mathbb{H}}(X^n)$')
     axs[0].set_xlabel('Sample Size')
+
+    axs[1].plot(sizes, D_xseq_yseqs)
+    axs[1].axhline(y=0, color='r', linestyle='--')
+    axs[1].set_xscale('log')
+    axs[1].set_ylabel('$\mathrm{\mathbb{I}}(X^n -> Y^n)$')
+    axs[1].set_xlabel('Sample Size')
+
     plt.show()
 
-    # fig, axs = plt.subplots(2, 1)
-    # # axs[0].set_ylim(-0.1, 1.1)
 
-    # axs[0].plot(sizes, D_xseq_yseqs)
-    # axs[0].set_xscale('log')
-    # # axs[0].set_ylabel('$\mathbb{I}(X^n \rightarrow Y^n)$')
-    # axs[0].axhline(y=0, color='r', linestyle='--')
-    # axs[0].set_xlabel('Sample Size')
+def sweep_k():
+    """
+    Plot the directed information as a function of sample size for different Markov orders.
+    """
+    history_length = 100
+    sample_sizes = [2**i for i in range(1, 17)]
+    D_xseq_yseqs = defaultdict(list)
+    ks = [2**i for i in range(6)]
 
-    # plt.show()
+    for k in tqdm(ks):
+        for sample_size in sample_sizes:
+            x_seqs = [tuple(np.random.randint(0, 2, size=history_length)) for _ in range(sample_size)]
+            y_seqs = [tuple(np.random.randint(0, 2, size=history_length)) for _ in range(sample_size)]
+            D_xseq_yseqs[k].append(mi.directed_info_approx_markov(x_seqs, y_seqs, k))
+
+    colors = cm.Blues(np.linspace(0, 1, len(ks)))
+    for i, (k, D) in enumerate(zip(ks, D_xseq_yseqs.values())):
+        plt.plot(sample_sizes, D, label=f'k={k}', color=colors[i])
+    plt.legend(title='Markov Order')
+    plt.xscale('log')
+    plt.ylabel('$\mathrm{\mathbb{I}}(X^n → Y^n)$')
+    plt.xlabel('Sample Size')
+    plt.axhline(y=0, color='r', linestyle='--')
+    plt.show()
+
 
 if __name__ == "__main__":
     # drv_quantities()
-    drs_quantities()
+    # drs_quantities()
+    sweep_k()
 
 
 
