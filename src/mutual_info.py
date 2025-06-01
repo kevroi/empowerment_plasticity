@@ -105,6 +105,59 @@ def conditional_mutual_info(xs: Sequence[Hashable],
     h_x_given_yz = conditional_entropy(xs, yz_pairs)
     return h_x_given_z - h_x_given_yz
 
+def conditional_mutual_info_from_context(
+    xs: Sequence[Hashable],
+    ys: Sequence[Hashable],
+    contexts: Sequence[tuple[Hashable]]
+) -> float:
+    """
+    Estimate I(X ; Y | C) from samples of (X, Y, C)
+    """
+    assert len(xs) == len(ys) == len(contexts)
+
+    joint_ctx = list(zip(xs, ys, contexts))
+    h_x_given_ctx = conditional_entropy_from_context(xs, contexts)
+    h_x_given_y_ctx = conditional_entropy_from_context(xs, list(zip(ys, contexts)))
+
+    return h_x_given_ctx - h_x_given_y_ctx
+
+
+def directed_info_approx_markov(
+    x_seqs: Sequence[Sequence[Hashable]],
+    y_seqs: Sequence[Sequence[Hashable]],
+    k: int = 2
+) -> float:
+    """
+    Estimate I(X^n -> Y^n) ≈ sum_t I(X_{t-k:t} ; Y_t | Y_{t-k:t-1})
+
+    Args:
+        x_seqs: list of X sequences (samples), shape (num_samples, seq_len)
+        y_seqs: list of Y sequences (samples), shape (num_samples, seq_len)
+        k: Markov order (context length)
+    """
+    seq_len = len(x_seqs[0])
+    assert all(len(seq) == seq_len for seq in y_seqs)
+    num_samples = len(x_seqs)
+
+    total_info = 0.0
+    for t in range(seq_len):
+        xs_local = []
+        ys_local = []
+        contexts = []
+
+        for x_seq, y_seq in zip(x_seqs, y_seqs):
+            # Build history window
+            x_hist = tuple(x_seq[max(0, t - k):t + 1])  # include X_t
+            y_hist = tuple(y_seq[max(0, t - k):t])      # up to Y_{t-1}
+            xs_local.append(x_hist)
+            ys_local.append(y_seq[t])
+            contexts.append(y_hist)
+
+        info_t = conditional_mutual_info_from_context(xs_local, ys_local, contexts)
+        total_info += info_t
+
+    return total_info
+
 # TO TRY:
 # Masey 1990 also suggests another way to compute DI:
 # I(X^n -> Y^n) = H(Y^N) - \sum{n=1}^N H(Y_n | X_n)
