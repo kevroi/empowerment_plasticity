@@ -44,7 +44,8 @@ class LightRooms(gym.Env):
         self.current_room = 0
         self.light_state = 0
         self.x_state = 0  # Bernoulli state that determines light behavior
-        
+        self.pending_switch = None  # can be 'flip', 'random', or None - may need a better typing system
+
         # For visualization
         self.window = None
         self.clock = None
@@ -79,34 +80,30 @@ class LightRooms(gym.Env):
             truncated: Always False
             info: Additional information
         """
-        # Update X state (fair coin flip)
+        # Apply pending effect from previous lever pull
+        if self.pending_switch == "flip":
+            self.light_state = 1 - self.light_state
+        elif self.pending_switch == "random":
+            self.light_state = self.x_state
+        self.pending_switch = None  # reset
+
+        # Update X state
         self.x_state = self.np_random.integers(0, 2)
 
-        # Handle movement actions
-        if action == 0:  # Move left
+        # Movement actions
+        if action == 0:
             self.current_room = max(0, self.current_room - 1)
-        elif action == 1:  # Move right
+        elif action == 1:
             self.current_room = min(self.n_total_rooms - 1, self.current_room + 1)
-        elif action == 2:  # Pull lever
-            # Probability of controlling the light is current_room/n_rooms
+        elif action == 2:
             control_prob = self.current_room / self.n_rooms
-            
             if self.np_random.random() < control_prob:
-                # Agent controls the light
-                self.light_state = 1 - self.light_state
+                self.pending_switch = "flip"
             else:
-                # X controls the light
-                self.light_state = self.x_state
-        
+                self.pending_switch = "random"
+
         observation = (self.current_room, self.light_state)
-        info = {
-            "x_state": self.x_state,
-            "control_probability": self.current_room / self.n_rooms
-        }
-        
-        if self.render_mode == "human":
-            self._render_frame()
-            
+        info = {"x_state": self.x_state, "control_probability": self.current_room / self.n_rooms}
         return observation, 0.0, False, False, info
     
     def render(self):
