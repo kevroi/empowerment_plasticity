@@ -1,11 +1,11 @@
 import numpy as np
 from collections import defaultdict, Counter
 from typing import Sequence, Hashable
-from scipy.stats import entropy as scipy_entropy
+
 
 def entropy(xs: Sequence[Hashable], mm_correction: bool = False) -> float:
     """
-    H(X) = - \sum_{x \in X} p(x) \log_2 p(x)
+    H(X) = - \sum_{x \in \mathcal{X}} p(x) \log_2 p(x)
     """
     counts = Counter(xs)
     total = len(xs)
