@@ -18,6 +18,15 @@ def entropy(xs: Sequence[Hashable], mm_correction: bool = False) -> float:
         return mle_entropy + correction
     else:
         return mle_entropy
+    
+def incorrect_entropy_seq(x_seqs: Sequence[Sequence[Hashable]], k: int = 2) -> float:
+    """
+    Estimate H(X^n) ≈ \sum_{X^n \in \mathcal{D}} \text{Pr}(X^n) \log_2(\text{Pr}(X^n))
+    """
+    counts = Counter(x_seqs)
+    total = len(x_seqs)
+    probabilities = np.array([count / total for count in counts.values()])
+    return -np.sum(p * np.log2(p) for p in probabilities if p > 0)
 
 def entropy_seq(x_seqs: Sequence[Sequence[Hashable]], k: int = 2) -> float:
     """
