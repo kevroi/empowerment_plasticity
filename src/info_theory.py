@@ -5,7 +5,7 @@ from typing import Sequence, Hashable
 
 def entropy(xs: Sequence[Hashable], mm_correction: bool = False) -> float:
     """
-    H(X) = - \sum_{x \in \mathcal{X}} p(x) \log_2 p(x)
+    H(X) = - sum_x p(x) log_2(p(x))
     """
     counts = Counter(xs)
     total = len(xs)
