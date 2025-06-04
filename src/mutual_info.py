@@ -59,6 +59,43 @@ def entropy_seq(x_seqs: Sequence[Sequence[Hashable]], k: int = 2) -> float:
 
     return total_entropy
 
+def conditional_entropy_seq(
+        x_seqs: Sequence[Sequence[Hashable]],
+        y_seqs: Sequence[Sequence[Hashable]],
+        k: int = 2
+    ) -> float:
+        """
+        Estimate H(X^n | Y^n) ≈ sum_t H(X_t | X_{t-k:t-1}, Y_{t-k:t})
+
+        Args:
+            x_seqs: list of X sequences (samples)
+            y_seqs: list of Y sequences (samples), must match x_seqs
+            k: Markov order (context length)
+        """
+        seq_len = len(x_seqs[0])
+        assert all(len(seq) == seq_len for seq in y_seqs)
+
+        total_entropy = 0.0
+        for t in range(seq_len):
+            targets = []
+            contexts = []
+
+            for x_seq, y_seq in zip(x_seqs, y_seqs):
+                # Get X context
+                x_ctx = tuple(x_seq[max(0, t - k):t])
+                # Get Y context including current
+                y_ctx = tuple(y_seq[max(0, t - k):t + 1])
+                # Combined context: (X_past, Y_past+current)
+                ctx = x_ctx + y_ctx
+
+                targets.append(x_seq[t])
+                contexts.append(ctx)
+
+            h_t = conditional_entropy_from_context(targets, contexts)
+            total_entropy += h_t
+
+        return total_entropy
+
 def joint_entropy(xs: Sequence[Hashable],
                   ys: Sequence[Hashable]) -> float:
     joint_counts = Counter(zip(xs, ys))
@@ -80,6 +117,12 @@ def conditional_entropy_from_context(
 ) -> float:
     """
     Estimate H(targets | contexts) from empirical counts.
+
+    Args:
+        targets: list of targets (X_t) (NOT a sequence, as we do Counter() on this,
+                    which does not scale to high dimensions) see `conditional_entropy_seq`
+                    for dealing with sequences.
+        contexts: list of contexts (X_{t-k:t-1}, Y_{t-k:t})
     """
     assert len(targets) == len(contexts)
     context_to_targets = defaultdict(list)
