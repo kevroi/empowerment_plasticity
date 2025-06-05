@@ -194,11 +194,11 @@ def sweep_k():
     axs[1].set_xscale('log')
     axs[1].set_ylabel(r'$\mathrm{\mathbb{I}_k}(X^{%d} → X^{%d})$' % (history_length, history_length))
     axs[1].set_xlabel('Sample Size')
-    axs[1].axhline(y=0, color='r', linestyle='--')
+    axs[1].axhline(y=100, color='r', linestyle='--')
 
     #legend
     plt.legend(title='Markov Order', bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.subplots_adjust(wspace=0.75)
+    plt.subplots_adjust(wspace=0.9)
 
 
     
