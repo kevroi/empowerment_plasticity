@@ -1,6 +1,6 @@
 import gymnasium as gym
 import numpy as np
-from src.environment import LightRooms
+from src.environments.LightRooms import LightRooms
 
 def main():
     N = 4 # number of rooms = N+1
