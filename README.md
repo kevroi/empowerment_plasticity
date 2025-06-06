@@ -9,4 +9,4 @@ uv sync
 uv run experiments/measureFollowerAgent.py
 ```
 
-For `pip` you can `pip instal requirements.txt` as usual in your venv.
+For `pip` you can `pip install -r requirements.txt` as usual in your venv.
