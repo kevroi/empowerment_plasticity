@@ -1,5 +1,5 @@
 from src.environments.BitWorld import BitWorld
-from src.mutual_info import directed_info_approx_markov
+from src.info_theory import directed_info_approx_markov
 from tqdm import trange
 
 def run_sim(agent_func, env, n_steps, n_episodes):
@@ -7,20 +7,21 @@ def run_sim(agent_func, env, n_steps, n_episodes):
     obs_seqs = []
 
     for _ in trange(n_episodes):
+        # this section handles t=0
         obs, _ = env.reset() # O_0
-        obs_seq = [] # = [O_1, O_2, ... O_n]
+        obs_seq = [obs]
         act = 0 # A_0
-        act_seq = [] # = [A_0, A_1, ... A_{n-1}]
-        act_seq.append(act)
+        act_seq = [act]
 
         for t in range(n_steps):
-            obs_seq.append(obs)
-            act = agent_func(t, obs, act)
-            act_seq.append(act)
-            obs, _, _, _, _ = env.step(act)
+            obs_, _, _, _, _ = env.step(act)
+            act_ = agent_func(t, obs, act)
+            obs_seq.append(obs_)
+            act_seq.append(act_)
+            obs, act = obs_, act_
 
         obs_seqs.append(obs_seq)
-        act_seqs.append(act_seq[:-1])
+        act_seqs.append(act_seq)
 
     return act_seqs, obs_seqs
 
@@ -30,7 +31,7 @@ def agent_follow_obs(t, obs, last_action):
 if __name__ == "__main__":
     env = BitWorld()
     n_steps = 20
-    n_episodes = 1000
+    n_episodes = 10000
 
     actions, observations = run_sim(agent_follow_obs, env, n_steps, n_episodes)
 
