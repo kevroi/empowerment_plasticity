@@ -121,12 +121,10 @@ def conditional_mutual_info_from_context(
     """
     assert len(xs) == len(ys) == len(contexts)
 
-    joint_ctx = list(zip(xs, ys, contexts))
     h_x_given_ctx = conditional_entropy_from_context(xs, contexts)
     h_x_given_y_ctx = conditional_entropy_from_context(xs, list(zip(ys, contexts)))
 
     return h_x_given_ctx - h_x_given_y_ctx
-
 
 def directed_info_approx_markov(
     x_seqs: Sequence[Sequence[Hashable]],
@@ -143,7 +141,6 @@ def directed_info_approx_markov(
     """
     seq_len = len(x_seqs[0])
     assert all(len(seq) == seq_len for seq in y_seqs)
-    num_samples = len(x_seqs)
 
     total_info = 0.0
     for t in range(seq_len):

@@ -49,7 +49,7 @@ def drv_quantities():
 
     #  Subplots
     fig, axs = plt.subplots(3, 2, figsize=(4, 4), dpi=200)
-    fig.suptitle(r'$X, Y \sim \mathrm{Bernoulli}(0.5)$')
+    fig.suptitle(r'$X, Y, Z \sim \mathrm{Bernoulli}(0.5)$')
     axs[0, 0].set_ylim(-0.1, 1.1)
     axs[0, 1].set_ylim(-0.1, 1.1)
     axs[1, 0].set_ylim(-0.1, 2.1)
@@ -88,12 +88,9 @@ def drv_quantities():
     axs[2, 1].set_ylabel(r'$\mathrm{\mathbb{I}}(X;Y|Z)$')
     axs[2, 1].axhline(y=0, color='r', linestyle='--')
 
-    # # Hide x-axis ticks and labels for all except the bottom plot
-    # for i in range(5):  # 0 to 4 (all except the last one)
-    #     axs[i].tick_params(bottom=False, labelbottom=False)
     axs[2, 0].set_xlabel('Sample Size')
     axs[2, 1].set_xlabel('Sample Size')
-    # Turn off ticks for all subplots except bottom row
+
     for i in range(3):  # rows
         for j in range(2):  # columns
             if i != 2:  # Not the bottom row
@@ -115,31 +112,23 @@ def drs_quantities():
         x_seqs = [tuple(np.random.randint(0, 2, size=history_length)) for _ in range(n)]
         y_seqs = [tuple(np.random.randint(0, 2, size=history_length)) for _ in range(n)]
 
-        # H_xseqs.append(it.entropy_seq(x_seqs))
-        # H_yseqs.append(it.entropy_seq(y_seqs))
-        D_xseq_yseqs.append(it.directed_info_approx_markov(x_seqs, y_seqs, k=history_length)) # TODO incerasing k should make this go down, no?
-
-    # print(H_xseqs)
-    # print(D_xseq_yseqs) # TODO this goes up linearly when history length is 100
+        H_xseqs.append(it.entropy_seq(x_seqs))
+        H_yseqs.append(it.entropy_seq(y_seqs))
+        D_xseq_yseqs.append(it.directed_info_approx_markov(x_seqs, y_seqs, k=history_length))
     
     fig, axs = plt.subplots(1, 3, figsize=(8, 4), dpi=200)
-    # axs[0].plot(sizes, H_xseqs)
+
+    axs[0].plot(sizes, H_xseqs)
     axs[0].axhline(y=history_length, color='r', linestyle='--')
     axs[0].set_xscale('log')
     axs[0].set_ylabel(r'$\mathrm{\mathbb{H}}(X^{%d})$' % history_length)
     axs[0].set_xlabel('Sample Size')
 
-    # axs[1].plot(sizes, H_yseqs)
+    axs[1].plot(sizes, H_yseqs)
     axs[1].axhline(y=history_length, color='r', linestyle='--')
     axs[1].set_xscale('log')
     axs[1].set_ylabel(r'$\mathrm{\mathbb{H}}(Y^{%d})$' % history_length)
     axs[1].set_xlabel('Sample Size')
-
-    # axs[2].plot(sizes, H_xys)
-    # axs[2].axhline(y=0, color='r', linestyle='--')
-    # axs[2].set_xscale('log')
-    # axs[2].set_ylabel(r'$\mathrm{\mathbb{H}}(X^{%d}|Y^{%d})$' % (history_length, history_length))
-    # axs[2].set_xlabel('Sample Size')
 
     plt.subplots_adjust(wspace=0.5)
     
@@ -170,19 +159,11 @@ def sweep_k():
             D_xseq_xseqs[k].append(it.directed_info_approx_markov(x_seqs, x_seqs, k))
 
     colors = cm.Blues(np.linspace(0.2, 1, len(ks)))
-    # plt.figure(figsize=(2.5, 1.5), dpi=200)
-    # for i, (k, D) in enumerate(zip(ks, D_xseq_yseqs.values())):
-    #     plt.plot(sample_sizes, D, label=f'k={k}', color=colors[i])
-    # plt.legend(title='Markov Order', bbox_to_anchor=(1.05, 1), loc='upper left')
-    # plt.xscale('log')
-    # plt.ylabel(r'$\mathrm{\mathbb{I}}(X^n → Y^n)$')
-    # plt.xlabel('Sample Size')
-    # plt.axhline(y=0, color='r', linestyle='--')
 
     fig, axs = plt.subplots(1, 2, figsize=(3.5, 1.5), dpi=200)
+
     for i, (k, D) in enumerate(zip(ks, D_xseq_yseqs.values())):
         axs[0].plot(sample_sizes, D, label=f'k={k}', color=colors[i])
-    # axs[0].legend(title='Markov Order', bbox_to_anchor=(1.05, 1), loc='upper left')
     axs[0].set_xscale('log')
     axs[0].set_ylabel(r'$\mathrm{\mathbb{I}_k}(X^{%d} → Y^{%d})$' % (history_length, history_length))
     axs[0].set_xlabel('Sample Size')
@@ -190,7 +171,6 @@ def sweep_k():
 
     for i, (k, D) in enumerate(zip(ks, D_xseq_xseqs.values())):
         axs[1].plot(sample_sizes, D, label=f'k={k}', color=colors[i])
-    # axs[1].legend(title='Markov Order', bbox_to_anchor=(1.05, 1), loc='upper left')
     axs[1].set_xscale('log')
     axs[1].set_ylabel(r'$\mathrm{\mathbb{I}_k}(X^{%d} → X^{%d})$' % (history_length, history_length))
     axs[1].set_xlabel('Sample Size')
@@ -199,9 +179,6 @@ def sweep_k():
     #legend
     plt.legend(title='Markov Order', bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.subplots_adjust(wspace=0.9)
-
-
-    
 
     # k_peaks = [2**(2*i-1) for i in range(1,6)]
     # for k, sample_size in zip(ks[:-2], sample_sizes[:-2]):
@@ -212,9 +189,9 @@ def sweep_k():
 
 
 if __name__ == "__main__":
-    # drv_quantities()
+    drv_quantities()
     # drs_quantities()
-    sweep_k()
+    # sweep_k()
 
 
 
