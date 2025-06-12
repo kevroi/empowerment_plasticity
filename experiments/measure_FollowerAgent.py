@@ -3,6 +3,13 @@ from src.info_theory import directed_info_approx_markov
 from tqdm import trange
 
 def run_sim(agent_func, env, n_steps, n_episodes):
+    """
+    Runs the agent-environment loop for n_episodes episodes, each of length n_steps.
+
+    Returns:
+        act_seqs: list of sequences of actions
+        obs_seqs: list of sequences of observations
+    """
     act_seqs = []
     obs_seqs = []
 
