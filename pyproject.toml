@@ -13,7 +13,6 @@ dependencies = [
     "scikit-learn>=1.6.1",
     "tqdm>=4.67.1",
     "numba>=0.61.2",
-    "dit>=1.5",
     "ipykernel>=6.29.5",
 ]
 
