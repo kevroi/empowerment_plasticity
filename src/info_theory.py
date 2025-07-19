@@ -14,7 +14,6 @@ def entropy(xs: Sequence[Hashable], mm_correction: bool = False) -> float:
     
     if mm_correction:
         correction = (len(counts) - 1) / (2 * total)
-        # return mle_entropy - np.log2(total)
         return mle_entropy + correction
     else:
         return mle_entropy
@@ -127,6 +126,7 @@ def conditional_mutual_info_from_context(
     return h_x_given_ctx - h_x_given_y_ctx
 
 def directed_info_approx_markov(
+    # ep,
     x_seqs: Sequence[Sequence[Hashable]],
     y_seqs: Sequence[Sequence[Hashable]],
     k: int = 2
@@ -155,7 +155,7 @@ def directed_info_approx_markov(
             xs_local.append(x_hist)
             ys_local.append(y_seq[t])
             contexts.append(y_hist)
-
+        # print(f"Episode {ep}, k={k}, # unique x-histories: {len(set(xs_local))}, # unique y-contexts: {len(set(contexts))}")
         info_t = conditional_mutual_info_from_context(xs_local, ys_local, contexts)
         total_info += info_t
 

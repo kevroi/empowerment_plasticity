@@ -4,7 +4,6 @@ from src.environments.LightRooms import LightRooms
 from src.info_theory import directed_info_approx_markov
 from tqdm import tqdm
 from collections import defaultdict
-import matplotlib.cm as cm
 
 
 def collect_data_from_start_room(env, start_room, num_samples, seq_len, rng):

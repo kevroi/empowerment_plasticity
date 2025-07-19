@@ -3,17 +3,18 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from src.environments.FourRooms import FourRooms
 from src.agents.QLearning import QLearning
+from src.info_theory import directed_info_approx_markov
 
 
 def run(env, agent, num_episodes):
-    # Logging
-    returns_per_episode = []
-    obs_seqs_per_episode = []
-    action_seqs_per_episode = []
+    returns = []
+    obs_seqs = []
+    action_seqs = []
 
     for _ in range(num_episodes):
         obs, _ = env.reset()
-        done = truncated = False
+        done = False
+        truncated = False
         total_reward = 0
 
         obs_seq = []
@@ -29,15 +30,12 @@ def run(env, agent, num_episodes):
             action_seq.append(action)
             obs = next_obs
 
-        # Logging episode data
-        returns_per_episode.append(total_reward)
-        obs_seqs_per_episode.append(obs_seq)
-        action_seqs_per_episode.append(action_seq)
+        # Log episode data
+        returns.append(total_reward)
+        obs_seqs.append(obs_seq)
+        action_seqs.append(action_seq)
 
-        # print(f"Episode {episode + 1}: Return = {total_reward:.2f}")
-
-    # print("Training complete!")
-    return returns_per_episode, obs_seqs_per_episode, action_seqs_per_episode
+    return returns, obs_seqs, action_seqs
 
 # Moving average to smooth the curve (optional)
 def moving_average(data, window_size=10):
@@ -46,15 +44,22 @@ def moving_average(data, window_size=10):
 
 if __name__ == "__main__":
     # Hyperparameters
-    NUM_EPISODES = 100
-    MAX_STEPS = 500
-    NUM_RUNS = 50
+    NUM_EPISODES = 500
+    MAX_STEPS = 100
+    NUM_RUNS = 10
     ALPHA = 0.1
     GAMMA = 0.99
     EPSILON = 0.1
-    all_returns = []
+    MARKOV_Ks = [2, 5, 10]
+    MEASURE_LENGTH = 18 # Optimal episode length for FourRooms
 
-    
+    all_returns = []
+    all_obs_seqs = []
+    all_action_seqs = []
+    emp_per_episode = {k: [] for k in MARKOV_Ks}
+    plast_per_episode = {k: [] for k in MARKOV_Ks}
+    avg_episode_lengths = {k: [] for k in MARKOV_Ks}
+
     for _ in tqdm(range(NUM_RUNS)):
         env = FourRooms(max_steps=MAX_STEPS)
         agent = QLearning(
@@ -63,27 +68,43 @@ if __name__ == "__main__":
             gamma=GAMMA,
             epsilon=EPSILON
         )
-        returns, _, _ = run(env, agent, NUM_EPISODES)
+        returns, obs_seqs, action_seqs = run(env, agent, NUM_EPISODES)
         all_returns.append(returns)
+        all_obs_seqs.append(obs_seqs)
+        all_action_seqs.append(action_seqs)
+
+    for k in MARKOV_Ks:
+        for ep in range(NUM_EPISODES):
+            o_seqs = [all_obs_seqs[run][ep][:MEASURE_LENGTH] for run in range(NUM_RUNS)]
+            a_seqs = [all_action_seqs[run][ep][:MEASURE_LENGTH] for run in range(NUM_RUNS)]
+            emp = directed_info_approx_markov(a_seqs, o_seqs, k=k)
+            plast = directed_info_approx_markov(o_seqs, a_seqs, k=k)
+
+            emp_per_episode[k].append(emp)
+            plast_per_episode[k].append(plast)
+            episode_lengths = [len(all_obs_seqs[run][ep]) for run in range(NUM_RUNS)]
+            avg_episode_lengths[k].append(np.mean(episode_lengths))
 
     # Convert to array: shape = (NUM_RUNS, NUM_EPISODES)
     all_returns = np.array(all_returns)
     mean_returns = np.mean(all_returns, axis=0)
-    # smoothed_mean_returns = moving_average(mean_returns, window_size=10)
     stderr = np.std(all_returns, axis=0) / np.sqrt(NUM_RUNS)
 
-    # Plot
-    plt.figure(figsize=(10, 5))
-    plt.plot(mean_returns, label=f"Avg return over {NUM_RUNS} runs (smoothed)", linewidth=2)
-    plt.fill_between(
-        range(len(mean_returns)),
-        mean_returns - stderr,
-        mean_returns + stderr,
-        alpha=0.2
-    )
-    plt.xlabel("Episode")
-    plt.ylabel("Return")
-    plt.title(f"Q-Learning in FourRooms (Average of {NUM_RUNS} Runs)")
-    plt.legend()
+    # Plot empowerment/plasticity
+    fig, axs = plt.subplots(1, len(MARKOV_Ks)+1, figsize=(12, 3), dpi=200)
+    for i, k in enumerate(MARKOV_Ks):
+        axs[i].plot(emp_per_episode[k], label=f"Empowerment", color='darkorange')
+        axs[i].plot(plast_per_episode[k], label=f"Plasticity", color='steelblue')
+        axs[i].set_ylabel(f"Empowerment/Plasticity (k={k}) [Bits]")
+        axs[i].set_xlabel("Episode")
+        axs[i].set_ylim(-1, 16)
+
+    # Plot mean return
+    axs[len(MARKOV_Ks)].plot(mean_returns, label=f"Mean Return", color='black')
+    axs[len(MARKOV_Ks)].set_ylabel("Mean Return")
+    axs[len(MARKOV_Ks)].set_xlabel("Episode")
+
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.subplots_adjust(wspace=0.75)
     plt.tight_layout()
     plt.show()
